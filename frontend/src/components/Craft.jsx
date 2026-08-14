@@ -4,7 +4,11 @@ import { COLORS, FONT_DISPLAY } from "../constants/theme";
 
 export default function Craft() {
   return (
-    <section id="craft" style={{ background: COLORS.surfaceStrong, color: COLORS.textOnStrong, padding: "120px 0", position: "relative", overflow: "hidden" }} className="px-4 sm:px-6 md:px-10">
+   <section
+  id="craft"
+  style={{ background: COLORS.surfaceStrong, color: COLORS.textOnStrong, position: "relative", overflow: "hidden" }}
+  className="px-4 sm:px-6 md:px-10 py-16 md:py-[120px]"
+>
       <div
         style={{
           position: "absolute",
@@ -13,7 +17,7 @@ export default function Craft() {
         }}
       />
       <div style={{ maxWidth: 1240, margin: "0 auto", position: "relative" }}>
-        <div className="flex flex-col md:flex-row" style={{ gap: 36, alignItems: "center" }}>
+        <div className="flex flex-col md:flex-row gap-10 md:gap-9" style={{ alignItems: "center" }}>
           <Reveal className="flex-1">
             <p style={{ fontSize: 13, letterSpacing: "0.2em", textTransform: "uppercase", color: COLORS.gold, marginBottom: 18 }}>
               Where the metal comes from

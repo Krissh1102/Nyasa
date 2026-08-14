@@ -7,6 +7,8 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "products")
@@ -34,8 +36,14 @@ public class Product {
     @JoinColumn(name = "category_id")
     private Category category;
 
+     @ElementCollection
+    @CollectionTable(
+        name = "product_image_urls",
+        joinColumns = @JoinColumn(name = "product_id")
+    )
     @Column(name = "image_url")
-    private String imageUrl;
+    @Builder.Default
+    private List<String> imageUrls = new ArrayList<>();
 
     @Column(name = "is_active", nullable = false)
     @Builder.Default

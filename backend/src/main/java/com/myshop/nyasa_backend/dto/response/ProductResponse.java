@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -18,9 +19,9 @@ public class ProductResponse {
     private BigDecimal price;
     private Long categoryId;
     private String categoryName;
-    private String imageUrl;
+    private List<String>  imageUrl;
     private Boolean isActive;
-    private Integer stockQuantity; // null if inventory row missing
+    private Integer stockQuantity; 
 
     public static ProductResponse from(Product p, Integer stockQuantity) {
         return new ProductResponse(
@@ -30,7 +31,7 @@ public class ProductResponse {
                 p.getPrice(),
                 p.getCategory() != null ? p.getCategory().getId() : null,
                 p.getCategory() != null ? p.getCategory().getName() : null,
-                p.getImageUrl(),
+                p.getImageUrls(),
                 p.getIsActive(),
                 stockQuantity
         );

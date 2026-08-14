@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Data
 public class ProductRequest {
@@ -22,7 +23,7 @@ public class ProductRequest {
     @NotNull(message = "Category id is required")
     private Long categoryId;
 
-    private String imageUrl;
+    private List<String> imageUrl;
 
     private Boolean isActive;
 

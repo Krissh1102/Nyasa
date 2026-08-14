@@ -6,7 +6,11 @@ import { FAQS } from "../data/faqs";
 
 export default function FAQ({ faqOpen, setFaqOpen }) {
   return (
-    <section id="faq" style={{ background: COLORS.surfaceBase, padding: "110px 0" }} className="px-4 sm:px-6 md:px-10">
+   <section
+  id="faq"
+  style={{ background: COLORS.surfaceBase }}
+  className="px-4 sm:px-6 md:px-10 py-16 md:py-[110px]"
+>
       <div style={{ maxWidth: 800, margin: "0 auto" }}>
         <Reveal>
           <p style={{ fontSize: 13, letterSpacing: "0.2em", textTransform: "uppercase", color: COLORS.rust, marginBottom: 14, textAlign: "center" }}>

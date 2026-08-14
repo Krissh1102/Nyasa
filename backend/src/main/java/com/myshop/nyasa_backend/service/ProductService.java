@@ -54,7 +54,7 @@ public class ProductService {
                 .description(req.getDescription())
                 .price(req.getPrice())
                 .category(category)
-                .imageUrl(req.getImageUrl())
+                .imageUrls(req.getImageUrl())
                 .isActive(req.getIsActive() != null ? req.getIsActive() : true)
                 .build();
         product = productRepository.save(product);
@@ -73,7 +73,7 @@ public class ProductService {
         product.setDescription(req.getDescription());
         product.setPrice(req.getPrice());
         product.setCategory(category);
-        product.setImageUrl(req.getImageUrl());
+        product.setImageUrls(req.getImageUrl());
         if (req.getIsActive() != null) {
             product.setIsActive(req.getIsActive());
         }

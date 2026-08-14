@@ -28,7 +28,10 @@ export default function Collections({ activeCollection, setActiveCollection, set
   }, [setActiveCollection]);
 
   return (
-    <section style={{ background: COLORS.surfaceBase, padding: "100px 0" }} className="px-4 sm:px-6 md:px-10">
+  <section
+  style={{ background: COLORS.surfaceBase }}
+  className="px-4 sm:px-6 md:px-10 py-16 md:py-[100px]"
+>
       <div style={{ maxWidth: 1240, margin: "0 auto" }}>
         <Reveal>
           <p style={{ fontSize: 13, letterSpacing: "0.2em", textTransform: "uppercase", color: COLORS.rust, marginBottom: 14 }}>
@@ -74,11 +77,11 @@ export default function Collections({ activeCollection, setActiveCollection, set
               <div
                 key={c.key}
                 ref={(el) => (collectionRefs.current[c.key] = el)}
-                style={{
-                  paddingBottom: idx === COLLECTIONS.length - 1 ? 0 : 90,
-                  borderBottom: idx === COLLECTIONS.length - 1 ? "none" : `1px solid ${COLORS.border}`,
-                  marginBottom: idx === COLLECTIONS.length - 1 ? 0 : 90,
-                }}
+               style={{
+  paddingBottom: idx === COLLECTIONS.length - 1 ? 0 : 64,
+  borderBottom: idx === COLLECTIONS.length - 1 ? "none" : `1px solid ${COLORS.border}`,
+  marginBottom: idx === COLLECTIONS.length - 1 ? 0 : 64,
+}}
               >
                 <Reveal>
                   <div className="md:hidden" style={{ width: 72, height: 72, color: COLORS.verdigris, marginBottom: 20 }}>
@@ -87,7 +90,15 @@ export default function Collections({ activeCollection, setActiveCollection, set
                   <p style={{ fontSize: 13, letterSpacing: "0.15em", textTransform: "uppercase", color: COLORS.gold, marginBottom: 10 }}>
                     {c.kicker}
                   </p>
-                  <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: 32, marginBottom: 16 }}>{c.title}</h3>
+                <h3
+  style={{
+    fontFamily: FONT_DISPLAY,
+    fontSize: "clamp(24px, 6vw, 32px)",
+    marginBottom: 16,
+  }}
+>
+  {c.title}
+</h3>
                   <p style={{ fontSize: 15.5, lineHeight: 1.7, color: COLORS.textMuted, marginBottom: 22 }}>{c.copy}</p>
                   <button
                     onClick={() => {

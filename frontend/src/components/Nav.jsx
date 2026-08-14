@@ -1,4 +1,5 @@
 import React from "react";
+import { useLocation } from "react-router-dom";
 import { ShoppingBag, Menu, X, Moon, Sun } from "lucide-react";
 import JewelArt from "./JewelArt";
 import { COLORS, FONT_DISPLAY, THEME_MODES } from "../constants/theme";
@@ -26,7 +27,10 @@ export default function Nav({
   themeMode,
   toggleTheme,
 }) {
-  const navTextColor = scrolled || menuOpen ? COLORS.text : COLORS.textOnStrong;
+  const location = useLocation();
+  const isProductPage = location.pathname.startsWith("/product/");
+
+ const navTextColor = scrolled || menuOpen || isProductPage ? COLORS.text : COLORS.textOnStrong;
   const nextThemeLabel = themeMode === THEME_MODES.DARK ? "light" : "dark";
 
   const handleDrawerNav = (id) => {
@@ -56,8 +60,8 @@ export default function Nav({
           left: 0,
           right: 0,
           zIndex: 50,
-          background: scrolled || menuOpen ? COLORS.surfaceBase : "transparent",
-          borderBottom: scrolled || menuOpen ? `1px solid ${COLORS.border}` : "1px solid transparent",
+         background: scrolled || menuOpen || isProductPage ? COLORS.surfaceBase : "transparent",
+borderBottom: scrolled || menuOpen || isProductPage ? `1px solid ${COLORS.border}` : "1px solid transparent",
           backdropFilter: "blur(18px)",
           WebkitBackdropFilter: "blur(18px)",
           transition: "background 0.3s ease, border-color 0.3s ease",
@@ -81,38 +85,40 @@ export default function Nav({
             Nyasa
           </a>
 
-          <nav className="hidden md:flex items-center" style={{ gap: 32 }}>
-            {LINKS.map((c) => (
+          {!isProductPage && (
+            <nav className="hidden md:flex items-center" style={{ gap: 32 }}>
+              {LINKS.map((c) => (
+                <button
+                  key={c}
+                  onClick={() => scrollTo("shop")}
+                  className="underline-grow"
+                  style={{
+                    background: "none",
+                    border: "none",
+                    fontSize: 14,
+                    letterSpacing: "0.03em",
+                    color: navTextColor,
+                  }}
+                >
+                  {c}
+                </button>
+              ))}
               <button
-                key={c}
-                onClick={() => scrollTo("shop")}
+                onClick={() => scrollTo("craft")}
                 className="underline-grow"
-                style={{
-                  background: "none",
-                  border: "none",
-                  fontSize: 14,
-                  letterSpacing: "0.03em",
-                  color: navTextColor,
-                }}
+                style={{ background: "none", border: "none", fontSize: 14, letterSpacing: "0.03em", color: navTextColor }}
               >
-                {c}
+                The Craft
               </button>
-            ))}
-            <button
-              onClick={() => scrollTo("craft")}
-              className="underline-grow"
-              style={{ background: "none", border: "none", fontSize: 14, letterSpacing: "0.03em", color: navTextColor }}
-            >
-              The Craft
-            </button>
-            <button
-              onClick={() => scrollTo("faq")}
-              className="underline-grow"
-              style={{ background: "none", border: "none", fontSize: 14, letterSpacing: "0.03em", color: navTextColor }}
-            >
-              FAQ
-            </button>
-          </nav>
+              <button
+                onClick={() => scrollTo("faq")}
+                className="underline-grow"
+                style={{ background: "none", border: "none", fontSize: 14, letterSpacing: "0.03em", color: navTextColor }}
+              >
+                FAQ
+              </button>
+            </nav>
+          )}
 
           <div className="flex items-center" style={{ gap: 10 }}>
             <button
@@ -169,72 +175,74 @@ export default function Nav({
                 </span>
               )}
             </button>
-            <button
-              className="md:hidden"
-              onClick={() => setMenuOpen((v) => !v)}
-              aria-label="Toggle menu"
-              aria-expanded={menuOpen}
-              style={{ background: "none", border: "none", color: navTextColor, padding: 8, minHeight: 44 }}
-            >
-              {menuOpen ? <X size={22} strokeWidth={1.6} /> : <Menu size={22} strokeWidth={1.6} />}
-            </button>
+            {!isProductPage && (
+              <button
+                className="md:hidden"
+                onClick={() => setMenuOpen((v) => !v)}
+                aria-label="Toggle menu"
+                aria-expanded={menuOpen}
+                style={{ background: "none", border: "none", color: navTextColor, padding: 8, minHeight: 44 }}
+              >
+                {menuOpen ? <X size={22} strokeWidth={1.6} /> : <Menu size={22} strokeWidth={1.6} />}
+              </button>
+            )}
           </div>
         </div>
       </header>
 
-      {/* Drawer — lives in the same file/component as the header so it can
-          never be "forgotten" from App.jsx. Fixed to the left edge, revealed
-          as App.jsx's page wrapper slides right. Hardcoded colors: it WILL
-          be visible no matter what. */}
-   <nav
-  className="md:hidden"
-  aria-hidden={!menuOpen}
-  style={{
-    position: "fixed",
-    top: 0,
-    left: 0,
-    width: 280,
-    height: "100vh",
-    background: DRAWER_BG,
-    color: DRAWER_TEXT,
-    zIndex: 1,
-    overflowY: "auto",
-    boxSizing: "border-box",
-    borderRight: `1px solid ${DRAWER_BORDER}`,
-    transform: menuOpen ? "translateX(0)" : "translateX(-100%)",
-    transition: "transform 0.3s ease, background-color 0.35s ease, color 0.35s ease, border-color 0.35s ease",
-    pointerEvents: menuOpen ? "auto" : "none",
-  }}
->
-      
-        <div className="flex items-center justify-between px-6" style={{ height: 64, borderBottom: `1px solid ${DRAWER_BORDER}` }}>
-          <span style={{ fontSize: 13, letterSpacing: "0.08em", color: DRAWER_MUTED, textTransform: "uppercase", fontWeight: 600 }}>
-            Menu
-          </span>
-          <button
-            onClick={() => setMenuOpen(false)}
-            aria-label="Close menu"
-            tabIndex={menuOpen ? 0 : -1}
-            style={{ background: "none", border: "none", color: DRAWER_TEXT, padding: 8 }}
-          >
-            <X size={20} strokeWidth={1.8} />
-          </button>
-        </div>
-
-        <div className="flex flex-col px-6" style={{ paddingTop: 8 }}>
-          {LINKS.map((c) => (
-            <button key={c} onClick={() => handleDrawerNav("shop")} tabIndex={menuOpen ? 0 : -1} style={linkStyle}>
-              {c}
+      {/* Drawer — only relevant on the homepage, since it navigates to
+          in-page sections (#shop, #craft, #faq) that don't exist on
+          /product/:id. Hidden entirely on product pages. */}
+      {!isProductPage && (
+        <nav
+          className="md:hidden"
+          aria-hidden={!menuOpen}
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: 280,
+            height: "100vh",
+            background: DRAWER_BG,
+            color: DRAWER_TEXT,
+            zIndex: 1,
+            overflowY: "auto",
+            boxSizing: "border-box",
+            borderRight: `1px solid ${DRAWER_BORDER}`,
+            transform: menuOpen ? "translateX(0)" : "translateX(-100%)",
+            transition: "transform 0.3s ease, background-color 0.35s ease, color 0.35s ease, border-color 0.35s ease",
+            pointerEvents: menuOpen ? "auto" : "none",
+          }}
+        >
+          <div className="flex items-center justify-between px-6" style={{ height: 64, borderBottom: `1px solid ${DRAWER_BORDER}` }}>
+            <span style={{ fontSize: 13, letterSpacing: "0.08em", color: DRAWER_MUTED, textTransform: "uppercase", fontWeight: 600 }}>
+              Menu
+            </span>
+            <button
+              onClick={() => setMenuOpen(false)}
+              aria-label="Close menu"
+              tabIndex={menuOpen ? 0 : -1}
+              style={{ background: "none", border: "none", color: DRAWER_TEXT, padding: 8 }}
+            >
+              <X size={20} strokeWidth={1.8} />
             </button>
-          ))}
-          <button onClick={() => handleDrawerNav("craft")} tabIndex={menuOpen ? 0 : -1} style={linkStyle}>
-            The Craft
-          </button>
-          <button onClick={() => handleDrawerNav("faq")} tabIndex={menuOpen ? 0 : -1} style={{ ...linkStyle, borderBottom: "none" }}>
-            FAQ
-          </button>
-        </div>
-      </nav>
+          </div>
+
+          <div className="flex flex-col px-6" style={{ paddingTop: 8 }}>
+            {LINKS.map((c) => (
+              <button key={c} onClick={() => handleDrawerNav("shop")} tabIndex={menuOpen ? 0 : -1} style={linkStyle}>
+                {c}
+              </button>
+            ))}
+            <button onClick={() => handleDrawerNav("craft")} tabIndex={menuOpen ? 0 : -1} style={linkStyle}>
+              The Craft
+            </button>
+            <button onClick={() => handleDrawerNav("faq")} tabIndex={menuOpen ? 0 : -1} style={{ ...linkStyle, borderBottom: "none" }}>
+              FAQ
+            </button>
+          </div>
+        </nav>
+      )}
     </>
   );
 }

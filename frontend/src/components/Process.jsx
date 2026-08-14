@@ -5,7 +5,10 @@ import { PROCESS } from "../data/process";
 
 export default function Process() {
   return (
-    <section style={{ background: COLORS.surfaceBase, padding: "110px 0" }} className="px-4 sm:px-6 md:px-10">
+    <section
+      style={{ background: COLORS.surfaceBase }}
+      className="px-4 sm:px-6 md:px-10 py-16 md:py-[110px]"
+    >
       <div style={{ maxWidth: 1240, margin: "0 auto" }}>
         <Reveal>
           <p style={{ fontSize: 13, letterSpacing: "0.2em", textTransform: "uppercase", color: COLORS.rust, marginBottom: 14 }}>
@@ -15,17 +18,10 @@ export default function Process() {
             Five steps, and every one of them by hand.
           </h2>
         </Reveal>
-        <div className="process-grid grid grid-cols-1 md:grid-cols-5" style={{ gap: 0 }}>
+        <div className="process-grid grid grid-cols-1 md:grid-cols-5" >
           {PROCESS.map((step, i) => (
             <Reveal key={step.n} delay={i * 90}>
-              <div
-                className="process-step"
-                style={{
-                  padding: "0 22px 0 0",
-                  borderTop: `1px solid ${COLORS.border}`,
-                  paddingTop: 24,
-                }}
-              >
+              <div className="process-step">
                 <div style={{ fontFamily: FONT_DISPLAY, fontStyle: "italic", fontSize: 15, color: COLORS.gold, marginBottom: 14 }}>
                   {step.n}
                 </div>

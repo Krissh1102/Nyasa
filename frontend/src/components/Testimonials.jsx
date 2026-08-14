@@ -5,7 +5,10 @@ import { TESTIMONIALS } from "../data/testimonials";
 
 export default function Testimonials({ testimonialIdx, setTestimonialIdx }) {
   return (
-    <section style={{ background: COLORS.surfaceAccent, color: COLORS.textOnStrong, padding: "110px 0" }} className="px-4 sm:px-6 md:px-10">
+   <section
+  style={{ background: COLORS.surfaceAccent, color: COLORS.textOnStrong }}
+  className="px-4 sm:px-6 md:px-10 py-16 md:py-[110px]"
+>
       <div style={{ maxWidth: 800, margin: "0 auto", textAlign: "center" }}>
         <Reveal>
           <p style={{ fontSize: 13, letterSpacing: "0.2em", textTransform: "uppercase", color: COLORS.gold, marginBottom: 30 }}>
@@ -27,13 +30,13 @@ export default function Testimonials({ testimonialIdx, setTestimonialIdx }) {
                 onClick={() => setTestimonialIdx(i)}
                 aria-label={`Show testimonial ${i + 1}`}
                 style={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: "50%",
-                  border: "none",
-                  background: i === testimonialIdx ? COLORS.gold : COLORS.dotInactive,
-                  padding: 0,
-                }}
+  width: 8,
+  height: 8,
+  borderRadius: "50%",
+  border: "none",
+  background: i === testimonialIdx ? COLORS.gold : COLORS.dotInactive,
+  padding: 0,
+}}
               />
             ))}
           </div>
