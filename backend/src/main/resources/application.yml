@@ -1,0 +1,45 @@
+spring:
+  application:
+    name: nyasa-backend
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/nyasa
+    username: postgres
+    password: Krish_1102
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  jackson:
+    default-property-inclusion: non_null
+
+server:
+  port: 8080
+
+app:
+  jwt:
+    secret: "146667187a146aab1ef8cb0b5d899250ee0e797732cee9c3569514d766a174ce"
+    admin-expiration-ms: 86400000       
+    otp-token-expiration-ms: 900000     
+
+  otp:
+    expiry-minutes: 5
+    resend-cooldown-seconds: 30
+
+  seed:
+    admin-email: admin@shop.com
+    admin-password: ChangeMe123!
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
