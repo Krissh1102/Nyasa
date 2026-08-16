@@ -1,8 +1,10 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { X, Plus, Minus, Check, ArrowLeft } from "lucide-react";
 import JewelArt from "./JewelArt";
 import { COLORS, FONT_DISPLAY } from "../constants/theme";
 import { money } from "../utils/helpers";
+import { requestOtp, verifyOtp } from "../data/auth";
+import { placeOrderRequest } from "../data/order";
 
 const STEP = {
   CART: "cart",
@@ -12,6 +14,7 @@ const STEP = {
 };
 
 const STEP_ORDER = [STEP.CART, STEP.DETAILS, STEP.PHONE, STEP.OTP];
+const RESEND_COOLDOWN_SECONDS = 30;
 
 export default function CartDrawer({
   cartOpen,
@@ -36,6 +39,21 @@ export default function CartDrawer({
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const otpRefs = useRef([]);
 
+  const [sendingOtp, setSendingOtp] = useState(false);
+  const [otpSendError, setOtpSendError] = useState("");
+  const [resendCooldown, setResendCooldown] = useState(0);
+
+  const [verifying, setVerifying] = useState(false);
+  const [verifyError, setVerifyError] = useState("");
+
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setTimeout(() => setResendCooldown((s) => s - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [resendCooldown]);
+
+  const fullPhone = () => `+91${phone.replace(/\D/g, "")}`;
+
   const goToStep = (next) => {
     setDirection(STEP_ORDER.indexOf(next) > STEP_ORDER.indexOf(step) ? "forward" : "back");
     setStep(next);
@@ -49,6 +67,9 @@ export default function CartDrawer({
     setPincode("");
     setPhone("");
     setOtp(["", "", "", "", "", ""]);
+    setOtpSendError("");
+    setVerifyError("");
+    setResendCooldown(0);
   };
 
   const handleClose = () => {
@@ -83,26 +104,85 @@ export default function CartDrawer({
   const phoneValid = phone.replace(/\D/g, "").length >= 10;
   const otpValid = otp.every((d) => d !== "");
 
-  const handleVerify = () => {
-    if (!otpValid) return;
-
-    if (onOrderPlaced) {
-      onOrderPlaced({
-        name: name.trim(),
-        address: {
-          line: addressLine.trim(),
-          city: city.trim(),
-          pincode: pincode.trim(),
-        },
-        phone: `+91${phone}`,
-        items: cart,
-        subtotal,
-        placedAt: new Date().toISOString(),
-      });
+  const handleSendOtp = async () => {
+    if (!phoneValid || sendingOtp) return;
+    setSendingOtp(true);
+    setOtpSendError("");
+    try {
+      await requestOtp(fullPhone());
+      setSendingOtp(false);
+      setResendCooldown(RESEND_COOLDOWN_SECONDS);
+      goToStep(STEP.OTP);
+    } catch (e) {
+      setSendingOtp(false);
+      setOtpSendError(e.message || "Could not send code. Try again.");
     }
+  };
 
-    setCheckedOut(true);
-    setStep(STEP.CART);
+  const handleResend = async () => {
+    if (resendCooldown > 0 || sendingOtp) return;
+    setSendingOtp(true);
+    setOtpSendError("");
+    try {
+      await requestOtp(fullPhone());
+      setResendCooldown(RESEND_COOLDOWN_SECONDS);
+    } catch (e) {
+      setOtpSendError(e.message || "Could not resend code. Try again.");
+    } finally {
+      setSendingOtp(false);
+    }
+  };
+
+  const handleVerify = async () => {
+    if (!otpValid || verifying) return;
+    setVerifying(true);
+    setVerifyError("");
+
+    try {
+      const verifyRes = await verifyOtp(fullPhone(), otp.join(""));
+      const verificationToken = verifyRes?.data?.verificationToken ?? verifyRes?.verificationToken;
+      if (!verificationToken) {
+        throw new Error("Verification succeeded but no token was returned.");
+      }
+
+      const address = `${addressLine.trim()}, ${city.trim()} ${pincode.trim()}`;
+
+      const orderPayload = {
+        customerName: name.trim(),
+        phoneNumber: fullPhone(),
+        address,
+        verificationToken,
+        items: cart.map((item) => ({
+          productId: item.id,
+          quantity: item.qty,
+        })),
+      };
+
+      const orderRes = await placeOrderRequest(orderPayload);
+
+      if (onOrderPlaced) {
+        onOrderPlaced({
+          name: name.trim(),
+          address: {
+            line: addressLine.trim(),
+            city: city.trim(),
+            pincode: pincode.trim(),
+          },
+          phone: fullPhone(),
+          items: cart,
+          subtotal,
+          placedAt: new Date().toISOString(),
+          order: orderRes,
+        });
+      }
+
+      setVerifying(false);
+      setCheckedOut(true);
+      setStep(STEP.CART);
+    } catch (e) {
+      setVerifying(false);
+      setVerifyError(e.message || "Could not verify code. Try again.");
+    }
   };
 
   const inputStyle = {
@@ -152,6 +232,12 @@ export default function CartDrawer({
     padding: 6,
     cursor: "pointer",
     transition: "background 0.2s ease, transform 0.15s ease",
+  };
+
+  const errorTextStyle = {
+    fontSize: 12.5,
+    color: "#c0392b",
+    marginTop: 10,
   };
 
   const renderHeaderTitle = () => {
@@ -404,6 +490,7 @@ export default function CartDrawer({
                   autoFocus
                 />
               </div>
+              {otpSendError && <p style={errorTextStyle}>{otpSendError}</p>}
             </div>
           ) : step === STEP.OTP ? (
             <div key="otp" className="cd-step" style={{ padding: "24px 0" }}>
@@ -435,22 +522,25 @@ export default function CartDrawer({
                       outline: "none",
                     }}
                     autoFocus={i === 0}
+                    disabled={verifying}
                   />
                 ))}
               </div>
+              {verifyError && <p style={errorTextStyle}>{verifyError}</p>}
               <button
-                onClick={() => {/* resend logic */}}
+                onClick={handleResend}
+                disabled={resendCooldown > 0 || sendingOtp}
                 style={{
                   background: "none",
                   border: "none",
-                  color: COLORS.verdigris,
+                  color: resendCooldown > 0 || sendingOtp ? COLORS.textFaint : COLORS.verdigris,
                   fontSize: 12.5,
                   padding: 0,
                   marginTop: 18,
-                  cursor: "pointer",
+                  cursor: resendCooldown > 0 || sendingOtp ? "not-allowed" : "pointer",
                 }}
               >
-                Resend code
+                {resendCooldown > 0 ? `Resend code (${resendCooldown}s)` : "Resend code"}
               </button>
             </div>
           ) : cart.length === 0 ? (
@@ -563,12 +653,12 @@ export default function CartDrawer({
         {!checkedOut && step === STEP.PHONE && (
           <div className="cd-step" style={{ padding: "20px 22px", borderTop: `1px solid ${COLORS.border}` }}>
             <button
-              onClick={() => goToStep(STEP.OTP)}
-              disabled={!phoneValid}
+              onClick={handleSendOtp}
+              disabled={!phoneValid || sendingOtp}
               className="cd-primary-btn"
-              style={primaryButtonStyle(!phoneValid)}
+              style={primaryButtonStyle(!phoneValid || sendingOtp)}
             >
-              Send OTP
+              {sendingOtp ? "Sending..." : "Send OTP"}
             </button>
           </div>
         )}
@@ -577,11 +667,11 @@ export default function CartDrawer({
           <div className="cd-step" style={{ padding: "20px 22px", borderTop: `1px solid ${COLORS.border}` }}>
             <button
               onClick={handleVerify}
-              disabled={!otpValid}
+              disabled={!otpValid || verifying}
               className="cd-primary-btn"
-              style={primaryButtonStyle(!otpValid)}
+              style={primaryButtonStyle(!otpValid || verifying)}
             >
-              Verify & place order
+              {verifying ? "Verifying..." : "Verify & place order"}
             </button>
           </div>
         )}

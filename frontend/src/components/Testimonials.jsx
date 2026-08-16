@@ -6,6 +6,7 @@ import { TESTIMONIALS } from "../data/testimonials";
 export default function Testimonials({ testimonialIdx, setTestimonialIdx }) {
   return (
    <section
+   id="testimonials"
   style={{ background: COLORS.surfaceAccent, color: COLORS.textOnStrong }}
   className="px-4 sm:px-6 md:px-10 py-16 md:py-[110px]"
 >

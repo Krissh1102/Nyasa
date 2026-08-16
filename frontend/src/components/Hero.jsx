@@ -1,6 +1,6 @@
 import React from "react";
 import { ChevronDown, ArrowRight } from "lucide-react";
-import JewelArt from "./JewelArt";
+
 import { COLORS, FONT_DISPLAY } from "../constants/theme";
 
 export default function Hero({ scrollTo }) {
@@ -13,9 +13,29 @@ export default function Hero({ scrollTo }) {
           background: COLORS.heroGlow,
         }}
       />
-      <div className="spin-slow hero-art" style={{ color: COLORS.gold }}>
-        <JewelArt type="ring" />
-      </div>
+   <div
+  className="hero-art"
+  style={{
+    position: "absolute",
+    right: "2%",
+    top: "50%",
+    transform: "translateY(-50%)",
+    width: "40%",
+    maxWidth: 500,
+    zIndex: 1,
+  }}
+>
+  <img
+    src="/ring-hero.png"
+    alt="Gold ring"
+    style={{
+      width: "100%",
+      height: "auto",
+      objectFit: "contain",
+      display: "block",
+    }}
+  />
+</div>
 
       <div style={{ position: "relative", maxWidth: 1240, margin: "0 auto" }} className="px-4 sm:px-6 md:px-10">
         <div

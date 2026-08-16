@@ -1,6 +1,5 @@
 import React, { useEffect, useRef } from "react";
 import { ArrowUpRight } from "lucide-react";
-import JewelArt from "./JewelArt";
 import Reveal from "./Reveal";
 import { COLORS, FONT_DISPLAY } from "../constants/theme";
 import { COLLECTIONS } from "../data/collections";
@@ -55,20 +54,23 @@ export default function Collections({ activeCollection, setActiveCollection, set
                 position: "relative",
               }}
             >
-              {COLLECTIONS.map((c) => (
-                <JewelArt
-                  key={c.key}
-                  type={c.art}
-                  style={{
-                    position: "absolute",
-                    width: "50%",
-                    color: COLORS.verdigris,
-                    opacity: activeCollection === c.key ? 1 : 0,
-                    transform: activeCollection === c.key ? "scale(1)" : "scale(0.92)",
-                    transition: "opacity 0.5s ease, transform 0.5s ease",
-                  }}
-                />
-              ))}
+             {COLLECTIONS.map((c) => (
+  <img
+    key={c.key}
+    src={c.image}
+    alt={c.title}
+    style={{
+      position: "absolute",
+      width: "75%",
+      height: "75%",
+      objectFit: "contain",
+      opacity: activeCollection === c.key ? 1 : 0,
+      transform: activeCollection === c.key ? "scale(1)" : "scale(0.92)",
+      transition: "opacity 0.5s ease, transform 0.5s ease",
+      pointerEvents: "none",
+    }}
+  />
+))}
             </div>
           </div>
 
@@ -84,9 +86,25 @@ export default function Collections({ activeCollection, setActiveCollection, set
 }}
               >
                 <Reveal>
-                  <div className="md:hidden" style={{ width: 72, height: 72, color: COLORS.verdigris, marginBottom: 20 }}>
-                    <JewelArt type={c.art} />
-                  </div>
+                 <div
+  className="md:hidden"
+  style={{
+    width: 100,
+    height: 100,
+    marginBottom: 20,
+  }}
+>
+  <img
+    src={c.image}
+    alt={c.title}
+    style={{
+      width: "100%",
+      height: "100%",
+      objectFit: "contain",
+      display: "block",
+    }}
+  />
+</div>
                   <p style={{ fontSize: 13, letterSpacing: "0.15em", textTransform: "uppercase", color: COLORS.gold, marginBottom: 10 }}>
                     {c.kicker}
                   </p>

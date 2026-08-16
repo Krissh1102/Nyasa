@@ -12,7 +12,7 @@ const DRAWER_TEXT = "#16161d";
 const DRAWER_MUTED = "#6e7180";
 const DRAWER_BORDER = "#dcdce1";
 
-const LINKS = ["Rings", "Necklaces", "Earrings"];
+const LINKS = ["Order"];
 
 export default function Nav({
   scrolled,
@@ -109,6 +109,13 @@ borderBottom: scrolled || menuOpen || isProductPage ? `1px solid ${COLORS.border
                 style={{ background: "none", border: "none", fontSize: 14, letterSpacing: "0.03em", color: navTextColor }}
               >
                 The Craft
+              </button>
+               <button
+                onClick={() => scrollTo("testimonials")}
+                className="underline-grow"
+                style={{ background: "none", border: "none", fontSize: 14, letterSpacing: "0.03em", color: navTextColor }}
+              >
+                Testimonials
               </button>
               <button
                 onClick={() => scrollTo("faq")}
