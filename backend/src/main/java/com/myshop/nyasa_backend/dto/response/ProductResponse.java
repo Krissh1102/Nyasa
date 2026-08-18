@@ -16,6 +16,7 @@ public class ProductResponse {
     private Long id;
     private String name;
     private String description;
+    private BigDecimal weightGrams;
     private BigDecimal price;
     private Long categoryId;
     private String categoryName;
@@ -25,9 +26,11 @@ public class ProductResponse {
 
     public static ProductResponse from(Product p, Integer stockQuantity) {
         return new ProductResponse(
+            
                 p.getId(),
                 p.getName(),
                 p.getDescription(),
+                p.getWeightGrams(),
                 p.getPrice(),
                 p.getCategory() != null ? p.getCategory().getId() : null,
                 p.getCategory() != null ? p.getCategory().getName() : null,

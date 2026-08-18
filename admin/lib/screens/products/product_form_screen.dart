@@ -5,11 +5,6 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
-
-// image_background_remover's real API:
-//   await BackgroundRemover.instance.initializeOrt();   // once, before first use
-//   ui.Image result = await BackgroundRemover.instance.removeBg(Uint8List imageBytes);
-//   BackgroundRemover.instance.dispose();                // when the screen is done with it
 import 'package:image_background_remover/image_background_remover.dart';
 
 import '../../models/category.dart';
@@ -43,6 +38,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
   late TextEditingController _name;
   late TextEditingController _description;
   late TextEditingController _price;
+  late TextEditingController _weightGrams;
   late TextEditingController _quantity;
   late TextEditingController _lowStockAt;
   int? _categoryId;
@@ -80,13 +76,18 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
     _price = TextEditingController(
       text: p != null ? p.price.toStringAsFixed(0) : '',
     );
+    _weightGrams = TextEditingController(
+      text: p != null ? p.weightGrams.toString() : '',
+    );
     _quantity = TextEditingController(
       text: p != null ? p.stockQuantity.toString() : '0',
     );
     _lowStockAt = TextEditingController(text: (p?.lowStockAt ?? 5).toString());
     _categoryId = p?.categoryId;
     _isActive = p?.isActive ?? true;
-    _existingImageUrls = p?.imageUrl != null ? [p!.imageUrl!] : [];
+    // FIXED: Product.imageUrl (singular) no longer exists — model now has
+    // imageUrls (List<String>). Seed existing images straight from that list.
+    _existingImageUrls = p?.imageUrls ?? [];
     _loadCategories();
   }
 
@@ -117,6 +118,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
     _name.dispose();
     _description.dispose();
     _price.dispose();
+    _weightGrams.dispose();
     _quantity.dispose();
     _lowStockAt.dispose();
     if (_bgRemoverReady) {
@@ -308,12 +310,11 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
     });
 
     try {
-      final uploadedUrls = <String>[];
-      for (final image in _newImages) {
-        uploadedUrls.add(
-          await ProductService.instance.uploadImage(image.current),
-        );
-      }
+      // Upload all newly-picked images in parallel, then combine with
+      // whatever existing remote URLs the user kept.
+      final uploadedUrls = await ProductService.instance.uploadImages(
+        _newImages.map((img) => img.current).toList(),
+      );
       final allImageUrls = [..._existingImageUrls, ...uploadedUrls];
 
       final product = _isEditing
@@ -322,8 +323,11 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
               name: _name.text.trim(),
               description: _description.text.trim(),
               price: double.parse(_price.text.trim()),
+              weightGrams: int.parse(_weightGrams.text.trim()),
               categoryId: _categoryId!,
-              imageUrl: allImageUrls,
+              // FIXED: was imageUrl (singular) — ProductService now expects
+              // imageUrls (List<String>) matching the backend's ProductRequest.
+              imageUrls: allImageUrls,
               isActive: _isActive,
               initialQuantity: int.parse(_quantity.text.trim()),
               lowStockAt: int.parse(_lowStockAt.text.trim()),
@@ -332,8 +336,10 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
               name: _name.text.trim(),
               description: _description.text.trim(),
               price: double.parse(_price.text.trim()),
+              weightGrams: int.parse(_weightGrams.text.trim()),
               categoryId: _categoryId!,
-              imageUrl: allImageUrls,
+              // FIXED: was imageUrl (singular)
+              imageUrls: allImageUrls,
               isActive: _isActive,
               initialQuantity: int.parse(_quantity.text.trim()),
               lowStockAt: int.parse(_lowStockAt.text.trim()),
@@ -470,6 +476,9 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                     decoration: const InputDecoration(
                       hintText: 'Short description shown to customers',
                     ),
+                    validator: (v) => (v == null || v.trim().isEmpty)
+                        ? 'Description is required'
+                        : null,
                   ),
                   const SizedBox(height: 16),
                   Row(
@@ -487,10 +496,12 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                                   ),
                               decoration: const InputDecoration(hintText: '0'),
                               validator: (v) {
-                                if (v == null || v.trim().isEmpty)
+                                if (v == null || v.trim().isEmpty) {
                                   return 'Required';
-                                if (double.tryParse(v.trim()) == null)
+                                }
+                                if (double.tryParse(v.trim()) == null) {
                                   return 'Invalid';
+                                }
                                 return null;
                               },
                             ),
@@ -502,32 +513,50 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _Label('Category'),
-                            DropdownButtonFormField<int>(
-                              value: _categoryId,
-                              isExpanded: true,
-                              decoration: const InputDecoration(),
-                              items: _categories
-                                  .where(
-                                    (c) => c.isActive || c.id == _categoryId,
-                                  )
-                                  .map(
-                                    (c) => DropdownMenuItem(
-                                      value: c.id,
-                                      child: Text(
-                                        c.name,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  )
-                                  .toList(),
-                              onChanged: (v) => setState(() => _categoryId = v),
-                              validator: (v) => v == null ? 'Required' : null,
+                            _Label('Weight (g)'),
+                            TextFormField(
+                              controller: _weightGrams,
+                              keyboardType: TextInputType.number,
+                              decoration: const InputDecoration(hintText: '0'),
+                              validator: (v) {
+                                if (v == null || v.trim().isEmpty) {
+                                  return 'Required';
+                                }
+                                final parsed = int.tryParse(v.trim());
+                                if (parsed == null) {
+                                  return 'Invalid';
+                                }
+                                if (parsed < 0) {
+                                  return 'Must be ≥ 0';
+                                }
+                                return null;
+                              },
                             ),
                           ],
                         ),
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 16),
+                  _Label('Category'),
+                  DropdownButtonFormField<int>(
+                    value: _categoryId,
+                    isExpanded: true,
+                    decoration: const InputDecoration(),
+                    items: _categories
+                        .where((c) => c.isActive || c.id == _categoryId)
+                        .map(
+                          (c) => DropdownMenuItem(
+                            value: c.id,
+                            child: Text(
+                              c.name,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (v) => setState(() => _categoryId = v),
+                    validator: (v) => v == null ? 'Required' : null,
                   ),
                   const SizedBox(height: 16),
                   Row(
@@ -542,10 +571,12 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                               keyboardType: TextInputType.number,
                               decoration: const InputDecoration(hintText: '0'),
                               validator: (v) {
-                                if (v == null || v.trim().isEmpty)
+                                if (v == null || v.trim().isEmpty) {
                                   return 'Required';
-                                if (int.tryParse(v.trim()) == null)
+                                }
+                                if (int.tryParse(v.trim()) == null) {
                                   return 'Invalid';
+                                }
                                 return null;
                               },
                             ),
@@ -563,10 +594,12 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                               keyboardType: TextInputType.number,
                               decoration: const InputDecoration(hintText: '5'),
                               validator: (v) {
-                                if (v == null || v.trim().isEmpty)
+                                if (v == null || v.trim().isEmpty) {
                                   return 'Required';
-                                if (int.tryParse(v.trim()) == null)
+                                }
+                                if (int.tryParse(v.trim()) == null) {
                                   return 'Invalid';
+                                }
                                 return null;
                               },
                             ),

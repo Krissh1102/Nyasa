@@ -12,10 +12,12 @@ class ApiConfig {
 
   // TODO: adjust to your real login route if it differs.
   static const String login = '$baseUrl/api/admin/auth/login';
+  
 
   static const String products = '$baseUrl/api/products';
   static const String categories = '$baseUrl/api/categories';
   static String categoryById(int id) => '$categories/$id';
+  
   static const String adminOrders = '$baseUrl/api/admin/orders';
   static String adminOrderById(int id) => '$adminOrders/$id';
   static String adminOrderStatus(int id) => '$adminOrders/$id/status';
@@ -26,7 +28,7 @@ class ApiConfig {
   // TODO: replace with your real image-upload endpoint. It should accept a
   // multipart file under the field name "file" and return the hosted URL
   // (adjust the response-parsing key in add_item_screen.dart to match).
-  static const String upload = '$baseUrl/api/upload';
+ static String get upload => '$baseUrl/api/images';
   static String productById(int id) => '$products/$id';
 
   /// Headers for unauthenticated JSON requests (e.g. the login call itself).

@@ -32,11 +32,14 @@ public class Product {
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal price;
 
+   @Column(name = "weight_grams", precision = 8, scale = 3)
+    private BigDecimal weightGrams;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id")
     private Category category;
 
-     @ElementCollection
+    @ElementCollection
     @CollectionTable(
         name = "product_image_urls",
         joinColumns = @JoinColumn(name = "product_id")

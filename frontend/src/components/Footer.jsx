@@ -1,33 +1,57 @@
-import React from "react";
-import JewelArt from "./JewelArt";
+import React, { useEffect, useState } from "react";
 import { COLORS, FONT_DISPLAY } from "../constants/theme";
+import { fetchCategories } from "../data/products";
 
 export default function Footer({ setFilter, scrollTo }) {
+   const [categories, setCategories] = useState([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchCategories()
+      .then((data) => {
+        if (!cancelled) setCategories(data);
+      })
+      .catch(() => {
+        if (!cancelled) setCategories([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const goToCategory = (label) => {
+    const match = categories.find(
+      (c) => c.name.toLowerCase() === label.toLowerCase()
+    );
+    setFilter(match ? match.id : "All");
+    scrollTo("shop");
+  };
+
+
+
   return (
     <footer style={{ background: COLORS.surfaceStrong, color: COLORS.textOnStrongMuted, borderTop: `1px solid ${COLORS.borderOnStrong}` }} className="px-4 sm:px-6 md:px-10">
       <div style={{ maxWidth: 1240, margin: "0 auto", padding: "60px 0 30px" }}>
         <div className="grid grid-cols-2 md:grid-cols-4" style={{ gap: 32, marginBottom: 50 }}>
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 8, color: COLORS.textOnStrong, fontFamily: FONT_DISPLAY, fontSize: 20, marginBottom: 14 }}>
-              <JewelArt type="ring" style={{ width: 18, height: 18 }} />
+              <img src="/logo/logo-dark.png" alt="Nyasa" style={{  width: 30, height: 22, objectFit: "cover",  transform: "scale(1.6)", // zooms in — tweak this number to taste
+      objectPosition: "center",  }} />
               NYASA
             </div>
             <p style={{ fontSize: 13.5, lineHeight: 1.6, maxWidth: 220 }}>Fine jewelry, hand-cast from reclaimed metal since 2019.</p>
           </div>
           <div>
             <h5 style={{ color: COLORS.textOnStrong, fontSize: 13, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 16 }}>Shop</h5>
-            {["Rings", "Necklaces", "Earrings"].map((c) => (
-              <button
-                key={c}
-                onClick={() => {
-                  setFilter(c);
-                  scrollTo("shop");
-                }}
-                style={{ display: "block", background: "none", border: "none", color: "inherit", fontSize: 13.5, padding: "5px 0" }}
-              >
-                {c}
-              </button>
-            ))}
+              {["Rings", "Necklaces", "Earrings"].map((c) => (
+      <button
+        key={c}
+        onClick={() => goToCategory(c)}
+        style={{ display: "block", background: "none", border: "none", color: "inherit", fontSize: 13.5, padding: "5px 0" }}
+      >
+        {c}
+      </button>
+    ))}
           </div>
           <div>
             <h5 style={{ color: COLORS.textOnStrong, fontSize: 13, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 16 }}>Studio</h5>

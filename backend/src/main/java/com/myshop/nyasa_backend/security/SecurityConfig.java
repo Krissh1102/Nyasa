@@ -64,6 +64,10 @@ public class SecurityConfig {
 
                         // Flutter admin app - everything else under /api/admin/**
                         .requestMatchers("/api/admin/**").hasAnyRole("ADMIN", "SUPER_ADMIN", "STAFF")
+                        .requestMatchers(
+        org.springframework.http.HttpMethod.POST,
+        "/api/images"
+).hasAnyRole("ADMIN", "SUPER_ADMIN", "STAFF")
 
                         .anyRequest().authenticated()
                 )

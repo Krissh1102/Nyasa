@@ -1,5 +1,5 @@
+import 'package:admin/widgets/analysis_utils.dart';
 import 'package:flutter/material.dart';
-import '../../data/mock_data.dart';
 import '../../models/order.dart';
 import '../../models/product.dart';
 import '../../services/order_service.dart';
@@ -129,8 +129,12 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
       );
     }
 
-    final trending = MockData.trendingItems;
-    final sortedOrders = [..._orders]..sort((a, b) => b.id.compareTo(a.id));
+    final revenue = computeRevenueSeries(_orders, _revenueToggle);
+    final ordersChart = computeOrdersSeries(_orders, _chartToggle);
+    final trending = computeTrendingProducts(_orders, _trendingToggle);
+
+    final sortedOrders = [..._orders]
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
     final recentOrders = sortedOrders.take(3).toList();
 
     return RefreshIndicator(
@@ -181,8 +185,13 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 6),
-          const _SampleDataNote(),
+          const SizedBox(height: 10),
+          const _ChartLegend(
+            items: [
+              ('This period', AppColors.blushDeep),
+              ('Previous period', AppColors.ink),
+            ],
+          ),
           const SizedBox(height: 8),
           Container(
             padding: const EdgeInsets.fromLTRB(4, 16, 16, 4),
@@ -192,9 +201,12 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
               border: Border.all(color: AppColors.border),
             ),
             child: DualLineChart(
-              labels: MockData.chartDayLabels,
-              seriesA: MockData.revenuePink,
-              seriesB: MockData.revenueBlack,
+              labels: revenue.labels,
+              seriesA: revenue.current,
+              seriesB: revenue.previous,
+              minY: revenue.minY,
+              maxY: revenue.maxY,
+              step: revenue.step,
             ),
           ),
           const SizedBox(height: 24),
@@ -298,8 +310,13 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 6),
-          const _SampleDataNote(),
+          const SizedBox(height: 10),
+          const _ChartLegend(
+            items: [
+              ('Total orders', AppColors.cardMuted),
+              ('Delivered', AppColors.ink),
+            ],
+          ),
           const SizedBox(height: 8),
           Container(
             padding: const EdgeInsets.fromLTRB(4, 16, 16, 4),
@@ -309,9 +326,12 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
               border: Border.all(color: AppColors.border),
             ),
             child: LayeredAreaChart(
-              labels: MockData.chartDayLabels,
-              backSeries: MockData.analyticsBack,
-              frontSeries: MockData.analyticsFront,
+              labels: ordersChart.labels,
+              backSeries: ordersChart.total,
+              frontSeries: ordersChart.delivered,
+              minY: ordersChart.minY,
+              maxY: ordersChart.maxY,
+              step: ordersChart.step,
             ),
           ),
           const SizedBox(height: 24),
@@ -329,46 +349,84 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 6),
-          const _SampleDataNote(),
-          const SizedBox(height: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: AppColors.border),
-            ),
-            child: Column(
-              children: [
-                for (int i = 0; i < trending.length; i++) ...[
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 12,
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 46,
-                          height: 46,
-                          decoration: BoxDecoration(
-                            color: AppColors.background,
-                            borderRadius: BorderRadius.circular(12),
+          const SizedBox(height: 14),
+          if (trending.isEmpty)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: const Text(
+                'No sales in this period yet.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 13, color: AppColors.inkSoft),
+              ),
+            )
+          else
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: Column(
+                children: [
+                  for (int i = 0; i < trending.length; i++) ...[
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 12,
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 46,
+                            height: 46,
+                            decoration: BoxDecoration(
+                              color: AppColors.background,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(
+                              Icons.shopping_bag_outlined,
+                              color: AppColors.ink,
+                              size: 20,
+                            ),
                           ),
-                          child: Icon(
-                            trending[i].icon,
-                            color: AppColors.ink,
-                            size: 20,
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  trending[i].name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 13.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.ink,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  trending[i].subtitle,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: AppColors.inkFaint,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
                               Text(
-                                trending[i].name,
+                                '${trending[i].salesCount}',
                                 style: const TextStyle(
                                   fontSize: 13.5,
                                   fontWeight: FontWeight.w700,
@@ -377,68 +435,58 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                trending[i].subtitle,
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: AppColors.inkFaint,
+                                'Sales ${trending[i].isUp ? '+' : ''}${trending[i].changePercent.toStringAsFixed(0)}%',
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: trending[i].isUp
+                                      ? AppColors.success
+                                      : AppColors.danger,
                                 ),
                               ),
                             ],
                           ),
-                        ),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text(
-                              '${trending[i].salesCount}',
-                              style: const TextStyle(
-                                fontSize: 13.5,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.ink,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'Sales ${trending[i].isUp ? '+' : ''}${trending[i].changePercent.toStringAsFixed(0)}%',
-                              style: TextStyle(
-                                fontSize: 11.5,
-                                fontWeight: FontWeight.w700,
-                                color: trending[i].isUp
-                                    ? AppColors.success
-                                    : AppColors.danger,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                  if (i != trending.length - 1)
-                    const Divider(height: 1, indent: 12, endIndent: 12),
+                    if (i != trending.length - 1)
+                      const Divider(height: 1, indent: 12, endIndent: 12),
+                  ],
                 ],
-              ],
+              ),
             ),
-          ),
         ],
       ),
     );
   }
 }
 
-/// Small inline flag for sections still backed by MockData because no
-/// analytics endpoint exists yet. Remove once a real one is wired up.
-class _SampleDataNote extends StatelessWidget {
-  const _SampleDataNote();
+class _ChartLegend extends StatelessWidget {
+  final List<(String, Color)> items;
+  const _ChartLegend({required this.items});
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      'Sample data — connect an analytics endpoint to make this live',
-      style: TextStyle(
-        fontSize: 11,
-        color: AppColors.inkFaint.withValues(alpha: 0.8),
-        fontStyle: FontStyle.italic,
-      ),
+    return Row(
+      children: [
+        for (final (label, color) in items) ...[
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 11.5,
+              color: AppColors.inkSoft,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(width: 14),
+        ],
+      ],
     );
   }
 }

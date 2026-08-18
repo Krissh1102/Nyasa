@@ -1,15 +1,57 @@
-import 'package:admin/models/admin.dart';
 import 'package:flutter/material.dart';
-import '../../data/mock_data.dart';
+import '../../services/auth_service.dart';
 import '../../theme/app_theme.dart';
 import '../login/login_screen.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
   @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  AuthSession? _session;
+  bool _loading = true;
+  bool _loggingOut = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final session = await AuthService.instance.getSession();
+    if (!mounted) return;
+    setState(() {
+      _session = session;
+      _loading = false;
+    });
+  }
+
+  Future<void> _logout() async {
+    setState(() => _loggingOut = true);
+    await AuthService.instance.logout();
+    if (!mounted) return;
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      (route) => false,
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final admin = MockData.admin;
+    if (_loading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final name = _session?.name ?? 'Admin';
+    final email = _session?.email ?? '';
+    final role = _session?.role ?? '';
+    final initial = name.isNotEmpty ? name.substring(0, 1).toUpperCase() : '?';
 
     return Scaffold(
       appBar: AppBar(title: const Text('Profile')),
@@ -29,23 +71,25 @@ class ProfileScreen extends StatelessWidget {
                   radius: 32,
                   backgroundColor: AppColors.primary,
                   child: Text(
-                    admin.name.substring(0, 1),
+                    initial,
                     style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w700),
                   ),
                 ),
                 const SizedBox(height: 14),
-                Text(admin.name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.ink)),
+                Text(name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.ink)),
                 const SizedBox(height: 3),
-                Text(admin.email, style: const TextStyle(fontSize: 12.5, color: AppColors.inkSoft)),
-                const SizedBox(height: 10),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(color: AppColors.primaryLight, borderRadius: BorderRadius.circular(20)),
-                  child: Text(
-                    admin.role.label,
-                    style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: AppColors.primary),
+                Text(email, style: const TextStyle(fontSize: 12.5, color: AppColors.inkSoft)),
+                if (role.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(color: AppColors.primaryLight, borderRadius: BorderRadius.circular(20)),
+                    child: Text(
+                      role,
+                      style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: AppColors.primary),
+                    ),
                   ),
-                ),
+                ],
               ],
             ),
           ),
@@ -56,14 +100,9 @@ class ProfileScreen extends StatelessWidget {
           const SizedBox(height: 12),
           _MenuTile(
             icon: Icons.logout_rounded,
-            label: 'Log out',
+            label: _loggingOut ? 'Logging out...' : 'Log out',
             danger: true,
-            onTap: () {
-              Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(builder: (_) => const LoginScreen()),
-                (route) => false,
-              );
-            },
+            onTap: _loggingOut ? () {} : _logout,
           ),
         ],
       ),

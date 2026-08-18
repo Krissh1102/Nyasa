@@ -1,15 +1,55 @@
-import 'package:admin/models/admin.dart';
 import 'package:flutter/material.dart';
-import '../../data/mock_data.dart';
+import '../../services/auth_service.dart';
 import '../../theme/app_theme.dart';
 import '../login/login_screen.dart';
 
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
   @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> {
+  AuthSession? _session;
+  bool _loading = true;
+  bool _loggingOut = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final session = await AuthService.instance.getSession();
+    if (!mounted) return;
+    setState(() {
+      _session = session;
+      _loading = false;
+    });
+  }
+
+  Future<void> _logout() async {
+    setState(() => _loggingOut = true);
+    await AuthService.instance.logout();
+    if (!mounted) return;
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      (route) => false,
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final admin = MockData.admin;
+    if (_loading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    final name = _session?.name ?? 'Admin';
+    final email = _session?.email ?? '';
+    final role = _session?.role ?? '';
+    final initial = name.isNotEmpty ? name.substring(0, 1).toUpperCase() : '?';
 
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
@@ -28,7 +68,7 @@ class SettingsScreen extends StatelessWidget {
                   radius: 26,
                   backgroundColor: Colors.white.withValues(alpha: 0.15),
                   child: Text(
-                    admin.name.substring(0, 1),
+                    initial,
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 18,
@@ -42,7 +82,7 @@ class SettingsScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        admin.name,
+                        name,
                         style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w800,
@@ -51,31 +91,33 @@ class SettingsScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        admin.email,
+                        email,
                         style: TextStyle(
                           fontSize: 12,
                           color: Colors.white.withValues(alpha: 0.65),
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 9,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.14),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          admin.role.label,
-                          style: const TextStyle(
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
+                      if (role.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 9,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.14),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            role,
+                            style: const TextStyle(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
                           ),
                         ),
-                      ),
+                      ],
                     ],
                   ),
                 ),
@@ -103,14 +145,9 @@ class SettingsScreen extends StatelessWidget {
           const SizedBox(height: 12),
           _MenuTile(
             icon: Icons.logout_rounded,
-            label: 'Log out',
+            label: _loggingOut ? 'Logging out...' : 'Log out',
             danger: true,
-            onTap: () {
-              Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(builder: (_) => const LoginScreen()),
-                (route) => false,
-              );
-            },
+            onTap: _loggingOut ? () {} : _logout,
           ),
         ],
       ),

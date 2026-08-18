@@ -6,8 +6,6 @@ import 'package:http/http.dart' as http;
 import '../models/product.dart';
 import 'api_config.dart';
 
-/// Handles all product CRUD calls, mirroring CategoryService's
-/// { success, message, data } response handling.
 class ProductService {
   ProductService._();
   static final ProductService instance = ProductService._();
@@ -41,8 +39,9 @@ class ProductService {
     required String name,
     required String description,
     required double price,
+    required int weightGrams,
     required int categoryId,
-    required List<String> imageUrl,
+    required List<String> imageUrls,
     required bool isActive,
     required int initialQuantity,
     required int lowStockAt,
@@ -55,8 +54,9 @@ class ProductService {
           'name': name,
           'description': description,
           'price': price,
+          'weightGrams': weightGrams,
           'categoryId': categoryId,
-          'imageUrl': imageUrl,
+          'imageUrls': imageUrls,
           'isActive': isActive,
           'initialQuantity': initialQuantity,
           'lowStockAt': lowStockAt,
@@ -79,15 +79,14 @@ class ProductService {
     }
   }
 
-  // TODO: confirm the update endpoint expects the same field names as
-  // create (in particular "initialQuantity" vs. something like "quantity").
   Future<Product> update({
     required int id,
     required String name,
     required String description,
     required double price,
+    required int weightGrams,
     required int categoryId,
-    required List<String> imageUrl,
+    required List<String> imageUrls,
     required bool isActive,
     required int initialQuantity,
     required int lowStockAt,
@@ -100,8 +99,9 @@ class ProductService {
           'name': name,
           'description': description,
           'price': price,
+          'weightGrams': weightGrams,
           'categoryId': categoryId,
-          'imageUrl': imageUrl,
+          'imageUrls': imageUrls,
           'isActive': isActive,
           'initialQuantity': initialQuantity,
           'lowStockAt': lowStockAt,
@@ -144,27 +144,50 @@ class ProductService {
     }
   }
 
-  /// Uploads a single local image file and returns its hosted URL.
-  /// TODO: adjust the response-parsing key ("url") to match your endpoint.
   Future<String> uploadImage(File file) async {
     try {
       final request = http.MultipartRequest(
         'POST',
         Uri.parse(ApiConfig.upload),
       );
+
+      request.headers.addAll(await ApiConfig.authHeaders());
+
       request.files.add(await http.MultipartFile.fromPath('file', file.path));
+
       final streamed = await request.send();
       final response = await http.Response.fromStream(streamed);
 
       if (response.statusCode < 200 || response.statusCode >= 300) {
         throw Exception('Image upload failed (${response.statusCode})');
       }
+
       final body = jsonDecode(response.body) as Map<String, dynamic>;
-      final url = body['url'] as String?;
-      if (url == null) throw Exception('Upload response missing "url"');
-      return url;
+
+      final success = body['success'] as bool? ?? false;
+
+      if (!success) {
+        throw Exception(body['message'] as String? ?? 'Image upload failed');
+      }
+
+      // Your Spring Boot ApiResponse puts the Cloudinary URL in "data"
+      final imageUrl = body['data'] as String?;
+
+      if (imageUrl == null || imageUrl.isEmpty) {
+        throw Exception('Upload response missing "data"');
+      }
+
+      return imageUrl;
     } catch (e) {
       throw Exception('Could not upload image: $e');
     }
+  }
+
+  /// Uploads multiple local image files in parallel and returns their
+  /// hosted URLs in the same order as [files].
+  Future<List<String>> uploadImages(List<File> files) async {
+    if (files.isEmpty) return [];
+    final futures = files.map(uploadImage);
+    return Future.wait(futures);
   }
 }

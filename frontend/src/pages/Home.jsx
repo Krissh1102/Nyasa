@@ -9,11 +9,11 @@ import Process from "../components/Process";
 import Testimonials from "../components/Testimonials";
 import FAQ from "../components/FAQ";
 
-export default function Home({ filter, setFilter, addToCart, scrollTo }) {
+export default function Home({ filter, setFilter, addToCart, cart = [], scrollTo }) {
   const [activeCollection, setActiveCollection] = useState("Rings");
   const [faqOpen, setFaqOpen] = useState(0);
   const [testimonialIdx, setTestimonialIdx] = useState(0);
- 
+
 
   return (
     <>
@@ -25,12 +25,12 @@ export default function Home({ filter, setFilter, addToCart, scrollTo }) {
         setFilter={setFilter}
         scrollTo={scrollTo}
       />
-      <Shop filter={filter} setFilter={setFilter} addToCart={addToCart} />
+      <Shop filter={filter} setFilter={setFilter} addToCart={addToCart} cart={cart} />
       <Craft />
       <Process />
       <Testimonials testimonialIdx={testimonialIdx} setTestimonialIdx={setTestimonialIdx} />
       <FAQ faqOpen={faqOpen} setFaqOpen={setFaqOpen} />
-     
+
     </>
   );
 }

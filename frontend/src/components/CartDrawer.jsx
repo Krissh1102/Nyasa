@@ -19,13 +19,13 @@ const RESEND_COOLDOWN_SECONDS = 30;
 export default function CartDrawer({
   cartOpen,
   setCartOpen,
-  cart,
+  cart = [],
   checkedOut,
   setCheckedOut,
   updateQty,
   removeItem,
   subtotal,
-  onOrderPlaced, // optional: (orderData) => void — called once, right when the order is confirmed
+  onOrderPlaced,
 }) {
   const [step, setStep] = useState(STEP.CART);
   const [direction, setDirection] = useState("forward");
@@ -46,11 +46,21 @@ export default function CartDrawer({
   const [verifying, setVerifying] = useState(false);
   const [verifyError, setVerifyError] = useState("");
 
+  // id -> counter; >0 means "show warning + restart shake"
+  const [stockWarnings, setStockWarnings] = useState({});
+  const warningTimers = useRef({});
+
   useEffect(() => {
     if (resendCooldown <= 0) return;
     const timer = setTimeout(() => setResendCooldown((s) => s - 1), 1000);
     return () => clearTimeout(timer);
   }, [resendCooldown]);
+
+  useEffect(() => {
+    return () => {
+      Object.values(warningTimers.current).forEach(clearTimeout);
+    };
+  }, []);
 
   const fullPhone = () => `+91${phone.replace(/\D/g, "")}`;
 
@@ -93,6 +103,24 @@ export default function CartDrawer({
     if (e.key === "Backspace" && !otp[index] && index > 0) {
       otpRefs.current[index - 1]?.focus();
     }
+  };
+
+  const triggerItemWarning = (id) => {
+    setStockWarnings((w) => ({ ...w, [id]: (w[id] || 0) + 1 }));
+    clearTimeout(warningTimers.current[id]);
+    warningTimers.current[id] = setTimeout(() => {
+      setStockWarnings((w) => ({ ...w, [id]: 0 }));
+    }, 2000);
+  };
+
+  // THE FIX: only call updateQty(+1) if we're still under stockQuantity
+  const handleIncrementItem = (item) => {
+    const max = typeof item.stockQuantity === "number" ? item.stockQuantity : Infinity;
+    if (item.qty >= max) {
+      triggerItemWarning(item.id);
+      return;
+    }
+    updateQty(item.id, 1);
   };
 
   const detailsValid =
@@ -261,6 +289,17 @@ export default function CartDrawer({
           60% { opacity: 1; transform: scale(1.08); }
           100% { opacity: 1; transform: scale(1); }
         }
+        @keyframes cdShake {
+          0%, 100% { transform: translateX(0); }
+          20% { transform: translateX(-5px); }
+          40% { transform: translateX(4px); }
+          60% { transform: translateX(-3px); }
+          80% { transform: translateX(3px); }
+        }
+        @keyframes cdWarningIn {
+          from { opacity: 0; transform: translateY(-4px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
         .cd-step {
           animation: drawerStepIn 0.32s cubic-bezier(0.22, 1, 0.36, 1);
         }
@@ -308,6 +347,12 @@ export default function CartDrawer({
         }
         .cd-overlay {
           transition: opacity 0.35s ease;
+        }
+        .cd-qty-shake {
+          animation: cdShake 0.4s ease;
+        }
+        .cd-stock-warning {
+          animation: cdWarningIn 0.25s ease;
         }
       `}</style>
 
@@ -549,75 +594,108 @@ export default function CartDrawer({
             </div>
           ) : (
             <div key="cart" className="cd-step">
-              {cart.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex cd-cart-row"
-                  style={{
-                    gap: 14,
-                    padding: "16px 8px",
-                    margin: "0 -8px",
-                    borderBottom: `1px solid ${COLORS.border}`,
-                    borderRadius: 12,
-                  }}
-                >
+              {cart.map((item) => {
+                const max = typeof item.stockQuantity === "number" ? item.stockQuantity : Infinity;
+                const warningCount = stockWarnings[item.id] || 0;
+                return (
                   <div
+                    key={item.id}
+                    className="flex cd-cart-row"
                     style={{
-                      width: 64,
-                      height: 64,
-                      background: COLORS.surfaceSoft,
-                      borderRadius: 14,
-                      flexShrink: 0,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
+                      gap: 14,
+                      padding: "16px 8px",
+                      margin: "0 -8px",
+                      borderBottom: `1px solid ${COLORS.border}`,
+                      borderRadius: 12,
                     }}
                   >
-                    <JewelArt type={item.art} style={{ width: "60%", color: COLORS.verdigris }} />
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <p style={{ fontFamily: FONT_DISPLAY, fontSize: 15 }}>{item.name}</p>
-                        <p style={{ fontSize: 12, color: COLORS.textSoft }}>{item.material}</p>
-                      </div>
-                      <button
-                        onClick={() => removeItem(item.id)}
-                        className="cd-icon-btn"
-                        style={{ background: "none", border: "none", color: COLORS.textFaint, padding: 4 }}
-                        aria-label={`Remove ${item.name}`}
-                      >
-                        <X size={15} />
-                      </button>
+                    <div
+                      style={{
+                        width: 64,
+                        height: 64,
+                        background: COLORS.surfaceSoft,
+                        borderRadius: 14,
+                        flexShrink: 0,
+                        overflow: "hidden",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      {item.imageUrl?.length > 0 ? (
+                        <img
+                          src={item.imageUrl[0]}
+                          alt={item.name}
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "cover",
+                            display: "block",
+                          }}
+                          onError={(e) => {
+                            e.currentTarget.style.display = "none";
+                          }}
+                        />
+                      ) : (
+                        <JewelArt
+                          type={item.art}
+                          style={{
+                            width: "60%",
+                            color: COLORS.verdigris,
+                          }}
+                        />
+                      )}
                     </div>
-                    <div className="flex items-center justify-between" style={{ marginTop: 10 }}>
-                      <div
-                        className="flex items-center"
-                        style={{ border: `1px solid ${COLORS.border}`, borderRadius: 10, overflow: "hidden" }}
-                      >
+                    <div style={{ flex: 1 }}>
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p style={{ fontFamily: FONT_DISPLAY, fontSize: 15 }}>{item.name}</p>
+                          <p style={{ fontSize: 12, color: COLORS.textSoft }}>{item.material}</p>
+                        </div>
                         <button
-                          onClick={() => updateQty(item.id, -1)}
-                          className="cd-qty-btn"
-                          style={{ background: "none", border: "none", padding: "4px 8px", color: COLORS.text }}
-                          aria-label="Decrease quantity"
+                          onClick={() => removeItem(item.id)}
+                          className="cd-icon-btn"
+                          style={{ background: "none", border: "none", color: COLORS.textFaint, padding: 4 }}
+                          aria-label={`Remove ${item.name}`}
                         >
-                          <Minus size={12} />
-                        </button>
-                        <span style={{ fontSize: 13, minWidth: 18, textAlign: "center" }}>{item.qty}</span>
-                        <button
-                          onClick={() => updateQty(item.id, 1)}
-                          className="cd-qty-btn"
-                          style={{ background: "none", border: "none", padding: "4px 8px", color: COLORS.text }}
-                          aria-label="Increase quantity"
-                        >
-                          <Plus size={12} />
+                          <X size={15} />
                         </button>
                       </div>
-                      <span style={{ fontSize: 14 }}>{money(item.price * item.qty)}</span>
+                      <div className="flex items-center justify-between" style={{ marginTop: 10 }}>
+                        <div
+                          key={warningCount}
+                          className={`flex items-center ${warningCount ? "cd-qty-shake" : ""}`}
+                          style={{ border: `1px solid ${COLORS.border}`, borderRadius: 10, overflow: "hidden" }}
+                        >
+                          <button
+                            onClick={() => updateQty(item.id, -1)}
+                            className="cd-qty-btn"
+                            style={{ background: "none", border: "none", padding: "4px 8px", color: COLORS.text }}
+                            aria-label="Decrease quantity"
+                          >
+                            <Minus size={12} />
+                          </button>
+                          <span style={{ fontSize: 13, minWidth: 18, textAlign: "center" }}>{item.qty}</span>
+                          <button
+                            onClick={() => handleIncrementItem(item)}
+                            className="cd-qty-btn"
+                            style={{ background: "none", border: "none", padding: "4px 8px", color: COLORS.text }}
+                            aria-label="Increase quantity"
+                          >
+                            <Plus size={12} />
+                          </button>
+                        </div>
+                        <span style={{ fontSize: 14 }}>{money(item.price * item.qty)}</span>
+                      </div>
+                      {warningCount > 0 && (
+                        <p className="cd-stock-warning" style={{ fontSize: 11.5, color: "#c0392b", marginTop: 6 }}>
+                          Only {max} available
+                        </p>
+                      )}
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

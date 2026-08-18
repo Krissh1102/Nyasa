@@ -3,9 +3,10 @@ class Product {
   final String name;
   final String description;
   final double price;
+  final int weightGrams;
   final int categoryId;
   final String categoryName;
-  final String? imageUrl;
+  final List<String> imageUrls;
   final bool isActive;
   final int stockQuantity;
   final int lowStockAt;
@@ -15,9 +16,10 @@ class Product {
     required this.name,
     required this.description,
     required this.price,
+    this.weightGrams = 0,
     required this.categoryId,
     required this.categoryName,
-    this.imageUrl,
+    required this.imageUrls,
     this.isActive = true,
     required this.stockQuantity,
     this.lowStockAt = 5,
@@ -25,37 +27,48 @@ class Product {
 
   bool get isLowStock => stockQuantity <= lowStockAt;
   bool get isOutOfStock => stockQuantity <= 0;
+
   factory Product.fromJson(Map<String, dynamic> json) {
     return Product(
       id: (json['id'] as num).toInt(),
       name: json['name'] as String? ?? '',
       description: json['description'] as String? ?? '',
       price: (json['price'] as num?)?.toDouble() ?? 0,
+      weightGrams: (json['weightGrams'] as num?)?.toInt() ?? 0,
       categoryId: (json['categoryId'] as num?)?.toInt() ?? 0,
       categoryName: json['categoryName'] as String? ?? '',
-      imageUrl: _parseImageUrl(json['imageUrl']),
+      imageUrls: (json['imageUrls'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          [],
       isActive: json['isActive'] as bool? ?? true,
       stockQuantity: (json['stockQuantity'] as num?)?.toInt() ?? 0,
       lowStockAt: (json['lowStockAt'] as num?)?.toInt() ?? 5,
     );
   }
 
-  static String? _parseImageUrl(dynamic raw) {
-    if (raw == null) return null;
-    if (raw is String) return raw.isEmpty ? null : raw;
-    if (raw is List) {
-      return raw.isNotEmpty ? raw.first as String? : null;
-    }
-    return null;
+  Map<String, dynamic> toJson() {
+    return {
+      'name': name,
+      'description': description,
+      'price': price,
+      'weightGrams': weightGrams,
+      'categoryId': categoryId,
+      'imageUrls': imageUrls,
+      'isActive': isActive,
+      'stockQuantity': stockQuantity,
+      'lowStockAt': lowStockAt,
+    };
   }
 
   Product copyWith({
     String? name,
     String? description,
     double? price,
+    int? weightGrams,
     int? categoryId,
     String? categoryName,
-    String? imageUrl,
+    List<String>? imageUrls,
     bool? isActive,
     int? stockQuantity,
     int? lowStockAt,
@@ -65,9 +78,10 @@ class Product {
       name: name ?? this.name,
       description: description ?? this.description,
       price: price ?? this.price,
+      weightGrams: weightGrams ?? this.weightGrams,
       categoryId: categoryId ?? this.categoryId,
       categoryName: categoryName ?? this.categoryName,
-      imageUrl: imageUrl ?? this.imageUrl,
+      imageUrls: imageUrls ?? this.imageUrls,
       isActive: isActive ?? this.isActive,
       stockQuantity: stockQuantity ?? this.stockQuantity,
       lowStockAt: lowStockAt ?? this.lowStockAt,

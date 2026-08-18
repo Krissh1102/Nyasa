@@ -10,7 +10,6 @@ spring:
 
   jpa:
     hibernate:
-
       ddl-auto: update
     show-sql: false
     properties:
@@ -21,14 +20,19 @@ spring:
   jackson:
     default-property-inclusion: non_null
 
+cloudinary:
+  cloud-name: ncmcngid
+  api-key: 432874888299436
+  api-secret: lEEB5i-62D2ZBGMKg304OyZq-RM
+
 server:
   port: 8080
 
 app:
   jwt:
     secret: "146667187a146aab1ef8cb0b5d899250ee0e797732cee9c3569514d766a174ce"
-    admin-expiration-ms: 86400000       
-    otp-token-expiration-ms: 900000     
+    admin-expiration-ms: 86400000
+    otp-token-expiration-ms: 900000
 
   otp:
     expiry-minutes: 5

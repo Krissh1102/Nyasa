@@ -5,6 +5,7 @@ import "./styles/global.css";
 import Nav from "./components/Nav";
 import Footer from "./components/Footer";
 import CartDrawer from "./components/CartDrawer";
+import IntroAnimation from "./components/IntroAnimation";
 
 import Home from "./pages/Home";
 import ProductDetail from "./pages/ProductDetail";
@@ -14,6 +15,7 @@ import { COLORS, FONT_BODY, THEME_MODES, THEME_STORAGE_KEY } from "./constants/t
 
 const CART_STORAGE_KEY = "nyasa-cart";
 const ORDERS_STORAGE_KEY = "nyasa-orders"; // admin backup — local record of placed orders
+
 
 const getInitialThemeMode = () => {
   if (typeof window === "undefined") return THEME_MODES.LIGHT;
@@ -50,6 +52,8 @@ export default function App() {
   const [filter, setFilter] = useState("All");
   const [checkedOut, setCheckedOut] = useState(false);
   const [bump, setBump] = useState(false);
+  const [introDone, setIntroDone] = useState(false);
+  const handleIntroDone = useCallback(() => setIntroDone(true), []);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
@@ -71,25 +75,32 @@ export default function App() {
     }
   }, [cart]);
 
-  const addToCart = useCallback((product) => {
-    setCart((prev) => {
-      const found = prev.find((i) => i.id === product.id);
-      if (found) {
-        return prev.map((i) => (i.id === product.id ? { ...i, qty: i.qty + 1 } : i));
-      }
-      return [...prev, { ...product, qty: 1 }];
-    });
-    setBump(true);
-    setTimeout(() => setBump(false), 400);
-  }, []);
+const addToCart = useCallback((product) => {
+  setCart((prev) => {
+    const max = typeof product.stockQuantity === "number" ? product.stockQuantity : Infinity;
+    const found = prev.find((i) => i.id === product.id);
+    const currentQty = found ? found.qty : 0;
+    if (currentQty >= max) return prev; // already at stock limit
+    if (found) {
+      return prev.map((i) => (i.id === product.id ? { ...i, qty: i.qty + 1 } : i));
+    }
+    return [...prev, { ...product, qty: 1 }];
+  });
+  setBump(true);
+  setTimeout(() => setBump(false), 400);
+}, []);
 
-  const updateQty = (id, delta) => {
-    setCart((prev) =>
-      prev
-        .map((i) => (i.id === id ? { ...i, qty: Math.max(0, i.qty + delta) } : i))
-        .filter((i) => i.qty > 0)
-    );
-  };
+const updateQty = (id, delta, max) => {
+  setCart((prev) =>
+    prev
+      .map((i) => {
+        if (i.id !== id) return i;
+        const cap = typeof max === "number" ? max : Infinity;
+        return { ...i, qty: Math.min(cap, Math.max(0, i.qty + delta)) };
+      })
+      .filter((i) => i.qty > 0)
+  );
+};
 
   const removeItem = (id) => setCart((prev) => prev.filter((i) => i.id !== id));
 
@@ -135,6 +146,9 @@ export default function App() {
 
   return (
     <BrowserRouter>
+     {!introDone && <IntroAnimation onDone={handleIntroDone} />}
+     
+      <IntroAnimation onDone={() => setIntroDone(true)} />
       <div
         style={{
           fontFamily: FONT_BODY,
@@ -142,6 +156,8 @@ export default function App() {
           color: COLORS.text,
           position: "relative",
           minHeight: "100vh",
+          opacity: introDone ? 1 : 0,
+          transition: "opacity 0.5s ease",
         }}
       >
         <div className="nyasa-root">
@@ -163,10 +179,13 @@ export default function App() {
             <Route
               path="/"
               element={
-                <Home filter={filter} setFilter={setFilter} addToCart={addToCart} scrollTo={scrollTo} />
+                <Home filter={filter} setFilter={setFilter} addToCart={addToCart} cart={cart} scrollTo={scrollTo} />
               }
             />
-            <Route path="/product/:id" element={<ProductDetail addToCart={addToCart} />} />
+         <Route
+  path="/product/:id"
+  element={<ProductDetail addToCart={addToCart} cart={cart} updateQty={updateQty} />}
+/>
             <Route path="*" element={<NotFound />} />
           </Routes>
 

@@ -1,19 +1,23 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import { ArrowLeft, Plus, Minus } from "lucide-react";
 import { COLORS, FONT_DISPLAY } from "../constants/theme";
 import { fetchProductById } from "../data/products";
 import { money } from "../utils/helpers";
 
-export default function ProductDetail({ addToCart }) {
+export default function ProductDetail({ addToCart, cart = [], updateQty }) {
   const { id } = useParams();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [qty, setQty] = useState(1);
+  const [qty, setQty] = useState(1); // used only BEFORE the item is in the cart
   const [added, setAdded] = useState(false);
   const [activeImage, setActiveImage] = useState(0);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [mounted, setMounted] = useState(false);
+
+  const [stockWarning, setStockWarning] = useState(false);
+  const [shakeKey, setShakeKey] = useState(0);
+  const warningTimer = useRef(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -21,6 +25,7 @@ export default function ProductDetail({ addToCart }) {
     setProduct(null);
     setActiveImage(0);
     setMounted(false);
+    setQty(1);
 
     fetchProductById(id)
       .then((data) => {
@@ -38,7 +43,6 @@ export default function ProductDetail({ addToCart }) {
     };
   }, [id]);
 
-  // Trigger entrance animation once content is ready
   useEffect(() => {
     if (!loading && product) {
       const t = requestAnimationFrame(() => setMounted(true));
@@ -46,10 +50,11 @@ export default function ProductDetail({ addToCart }) {
     }
   }, [loading, product]);
 
-  // Reset crossfade whenever the active image changes
   useEffect(() => {
     setImageLoaded(false);
   }, [activeImage]);
+
+  useEffect(() => () => clearTimeout(warningTimer.current), []);
 
   if (loading) {
     return (
@@ -73,9 +78,48 @@ export default function ProductDetail({ addToCart }) {
   }
 
   const images = product.imageUrl && product.imageUrl.length > 0 ? product.imageUrl : [];
+  const stockQuantity = typeof product.stockQuantity === "number" ? product.stockQuantity : Infinity;
+  const outOfStock = stockQuantity <= 0;
+
+  // Cart-aware quantity: once the product is in the cart, the stepper
+  // reads/writes the cart directly so both screens stay in sync.
+  const cartItem = cart.find((i) => i.id === product.id);
+  const cartQty = cartItem?.qty || 0;
+  const inCart = cartQty > 0;
+  const displayQty = inCart ? cartQty : qty;
+  const atMax = displayQty >= stockQuantity;
+
+  const triggerStockWarning = () => {
+    setStockWarning(true);
+    setShakeKey((k) => k + 1);
+    clearTimeout(warningTimer.current);
+    warningTimer.current = setTimeout(() => setStockWarning(false), 2200);
+  };
+
+  const handleIncrement = () => {
+    if (atMax) {
+      triggerStockWarning();
+      return;
+    }
+    if (inCart) {
+      updateQty(product.id, 1, stockQuantity);
+    } else {
+      setQty((q) => q + 1);
+    }
+  };
+
+  const handleDecrement = () => {
+    if (inCart) {
+      updateQty(product.id, -1, stockQuantity);
+    } else {
+      setQty((q) => Math.max(1, q - 1));
+    }
+  };
 
   const handleAdd = () => {
-    for (let i = 0; i < qty; i++) addToCart(product);
+    if (outOfStock || inCart) return;
+    addToCart(product);
+    setQty(1);
     setAdded(true);
     setTimeout(() => setAdded(false), 1600);
   };
@@ -95,6 +139,13 @@ export default function ProductDetail({ addToCart }) {
         @keyframes pd-check-in {
           from { opacity: 0; transform: scale(0.6) rotate(-10deg); }
           to { opacity: 1; transform: scale(1) rotate(0deg); }
+        }
+        @keyframes pd-shake {
+          0%, 100% { transform: translateX(0); }
+          20% { transform: translateX(-6px); }
+          40% { transform: translateX(5px); }
+          60% { transform: translateX(-4px); }
+          80% { transform: translateX(3px); }
         }
         .pd-back-link {
           transition: gap 0.25s ease, color 0.25s ease;
@@ -118,24 +169,38 @@ export default function ProductDetail({ addToCart }) {
         .pd-qty-btn:active {
           transform: scale(0.9);
         }
+        .pd-qty-btn:disabled {
+          opacity: 0.35;
+          cursor: not-allowed;
+        }
         .pd-add-btn {
           transition: background 0.3s ease, transform 0.15s ease, box-shadow 0.3s ease;
         }
-        .pd-add-btn:hover {
+        .pd-add-btn:hover:not(:disabled) {
           transform: translateY(-2px);
           box-shadow: 0 10px 24px rgba(0, 0, 0, 0.16);
         }
-        .pd-add-btn:active {
+        .pd-add-btn:active:not(:disabled) {
           transform: translateY(0) scale(0.98);
         }
         .pd-add-btn.pd-added {
           animation: pd-pop 0.4s ease;
+        }
+        .pd-add-btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
         }
         .pd-main-image {
           transition: opacity 0.4s ease, transform 0.6s ease;
         }
         .pd-check {
           animation: pd-check-in 0.35s ease;
+        }
+        .pd-qty-shake {
+          animation: pd-shake 0.4s ease;
+        }
+        .pd-stock-warning {
+          animation: pd-fade-up 0.3s ease;
         }
       `}</style>
 
@@ -159,11 +224,7 @@ export default function ProductDetail({ addToCart }) {
         Back to shop
       </Link>
 
-      <div
-        className="flex flex-col md:flex-row"
-        style={{ gap: 48, alignItems: "flex-start" }}
-      >
-        {/* Image gallery */}
+      <div className="flex flex-col md:flex-row" style={{ gap: 48, alignItems: "flex-start" }}>
         <div
           style={{
             flex: 1,
@@ -222,6 +283,24 @@ export default function ProductDetail({ addToCart }) {
             >
               {product.categoryName}
             </span>
+            {outOfStock && (
+              <span
+                style={{
+                  position: "absolute",
+                  top: 16,
+                  right: 16,
+                  fontSize: 11,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  color: COLORS.textOnStrong,
+                  background: COLORS.rust,
+                  padding: "3px 10px",
+                  borderRadius: 4,
+                }}
+              >
+                Sold out
+              </span>
+            )}
           </div>
 
           {images.length > 1 && (
@@ -276,59 +355,93 @@ export default function ProductDetail({ addToCart }) {
               {product.description}
             </p>
           )}
+          {product.weightGrams > 0 && (
+            <p style={{ fontSize: 12.5, color: COLORS.textFaint, marginBottom: 28, marginTop: -18 }}>
+              Weight: {product.weightGrams >= 1000
+                ? `${(product.weightGrams / 1000).toFixed(2)} kg`
+                : `${product.weightGrams} g`}
+            </p>
+          )}
 
-          <div
-            className="flex items-center"
-            style={{
-              border: `1px solid ${COLORS.border}`,
-              borderRadius: 12,
-              width: "fit-content",
-              marginBottom: 20,
-              overflow: "hidden",
-            }}
-          >
-            <button
-              onClick={() => setQty((q) => Math.max(1, q - 1))}
-              className="pd-qty-btn"
-              style={{ background: "none", border: "none", padding: "10px 14px", color: COLORS.text }}
-              aria-label="Decrease quantity"
-            >
-              <Minus size={14} />
-            </button>
-            <span style={{ fontSize: 14, minWidth: 24, textAlign: "center" }}>{qty}</span>
-            <button
-              onClick={() => setQty((q) => q + 1)}
-              className="pd-qty-btn"
-              style={{ background: "none", border: "none", padding: "10px 14px", color: COLORS.text }}
-              aria-label="Increase quantity"
-            >
-              <Plus size={14} />
-            </button>
-          </div>
+          {!outOfStock && stockQuantity <= 5 && (
+            <p style={{ fontSize: 12.5, color: COLORS.rust, marginBottom: 16, marginTop: -18 }}>
+              Only {stockQuantity} left in stock
+            </p>
+          )}
 
-          <button
-            onClick={handleAdd}
-            className={`pd-add-btn ${added ? "pd-added" : ""}`}
-            style={{
-              width: "100%",
-              maxWidth: 320,
-              background: added ? COLORS.verdigris : COLORS.surfaceStrong,
-              color: COLORS.textOnStrong,
-              border: "none",
-              borderRadius: 14,
-              padding: "15px 0",
-              fontSize: 14,
-              letterSpacing: "0.03em",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 8,
-            }}
-          >
-            {added && <span className="pd-check">✓</span>}
-            {added ? "Added to bag" : "Add to bag"}
-          </button>
+          {inCart && (
+            <div
+              key={shakeKey}
+              className={`flex items-center ${stockWarning ? "pd-qty-shake" : ""}`}
+              style={{
+                border: `1px solid ${COLORS.border}`,
+                borderRadius: 12,
+                width: "fit-content",
+                marginBottom: 10,
+                overflow: "hidden",
+                opacity: outOfStock ? 0.5 : 1,
+              }}
+            >
+              <button
+                onClick={handleDecrement}
+                className="pd-qty-btn"
+                style={{ background: "none", border: "none", padding: "10px 14px", color: COLORS.text }}
+                aria-label="Decrease quantity"
+                disabled={outOfStock}
+              >
+                <Minus size={14} />
+              </button>
+              <span style={{ fontSize: 14, minWidth: 24, textAlign: "center" }}>{displayQty}</span>
+              <button
+                onClick={handleIncrement}
+                className="pd-qty-btn"
+                style={{ background: "none", border: "none", padding: "10px 14px", color: COLORS.text }}
+                aria-label="Increase quantity"
+                disabled={outOfStock}
+              >
+                <Plus size={14} />
+              </button>
+            </div>
+          )}
+
+          {stockWarning && (
+            <p className="pd-stock-warning" style={{ fontSize: 12.5, color: COLORS.rust, marginBottom: 14 }}>
+              {outOfStock ? "This piece is out of stock" : `Only ${stockQuantity} available`}
+            </p>
+          )}
+
+          {!inCart && (
+            <button
+              onClick={handleAdd}
+              className={`pd-add-btn ${added ? "pd-added" : ""}`}
+              disabled={outOfStock}
+              style={{
+                width: "100%",
+                maxWidth: 320,
+                background: added ? COLORS.verdigrisSoft : "#F3EFE8",
+                color: added ? COLORS.verdigris : "#1D1B18",
+                border: added ? `1px solid ${COLORS.verdigris}` : "1px solid transparent",
+                borderRadius: 14,
+                padding: "15px 0",
+                fontSize: 14,
+                letterSpacing: "0.03em",
+                cursor: outOfStock ? "not-allowed" : "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 8,
+              }}
+            >
+              {added && <span className="pd-check">✓</span>}
+              {outOfStock ? "Out of stock" : added ? "Added to bag" : "Add to bag"}
+            </button>
+          )}
+
+          {inCart && (
+            <p style={{ fontSize: 12.5, color: COLORS.textMuted, marginBottom: 4 }}>
+              In your bag — use the buttons above to adjust quantity.
+            </p>
+          )}
 
           <p style={{ fontSize: 11.5, color: COLORS.textFaint, marginTop: 14 }}>
             Shipping and duties calculated at checkout.

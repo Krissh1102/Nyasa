@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../data/mock_data.dart';
 import '../../models/category.dart';
+import '../../models/product.dart';
 import '../../services/category_service.dart';
+import '../../services/product_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/empty_state.dart';
 import 'category_form_sheet.dart';
@@ -15,6 +16,7 @@ class CategoriesScreen extends StatefulWidget {
 
 class _CategoriesScreenState extends State<CategoriesScreen> {
   List<Category> _categories = [];
+  List<Product> _products = [];
   bool _loading = true;
   String? _error;
 
@@ -30,10 +32,16 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
       _error = null;
     });
     try {
-      final categories = await CategoryService.instance.getAll();
+      // Categories and products both come from the live API now — fetch
+      // both so we can show a per-category product count.
+      final results = await Future.wait([
+        CategoryService.instance.getAll(),
+        ProductService.instance.getAll(),
+      ]);
       if (!mounted) return;
       setState(() {
-        _categories = categories;
+        _categories = results[0] as List<Category>;
+        _products = results[1] as List<Product>;
         _loading = false;
       });
     } catch (e) {
@@ -45,9 +53,8 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
     }
   }
 
-  // Product mock data is unrelated to the categories API wiring, kept as-is.
   int _productCountFor(int categoryId) =>
-      MockData.products.where((p) => p.categoryId == categoryId).length;
+      _products.where((p) => p.categoryId == categoryId).length;
 
   void _openForm({Category? category}) async {
     final result = await showCategoryFormSheet(context, category: category);

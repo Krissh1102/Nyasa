@@ -1,8 +1,11 @@
 import React from "react";
 import { useLocation } from "react-router-dom";
 import { ShoppingBag, Menu, X, Moon, Sun } from "lucide-react";
-import JewelArt from "./JewelArt";
 import { COLORS, FONT_DISPLAY, THEME_MODES } from "../constants/theme";
+import { useThemeMode } from "../utils/useThemeMode";
+
+const LOGO_LIGHT = "/logo/logo-light.png"; // for light backgrounds (dark ink)
+const LOGO_DARK = "/logo/logo-dark.png";   
 
 // Hardcoded so the drawer can NEVER render invisible, regardless of what
 // COLORS resolves to. Deliberately different from a plain white page so you
@@ -12,7 +15,10 @@ const DRAWER_TEXT = "#16161d";
 const DRAWER_MUTED = "#6e7180";
 const DRAWER_BORDER = "#dcdce1";
 
-const LINKS = ["Order"];
+// Single shared timing so every themed element crossfades in lockstep.
+const THEME_TRANSITION = "background-color 0.4s ease, border-color 0.4s ease, color 0.4s ease, box-shadow 0.4s ease";
+
+const LINKS = ["The Shop"];
 
 export default function Nav({
   scrolled,
@@ -27,6 +33,9 @@ export default function Nav({
   themeMode,
   toggleTheme,
 }) {
+   const theme = useThemeMode();
+   const isDark = theme === "dark";
+
   const location = useLocation();
   const isProductPage = location.pathname.startsWith("/product/");
 
@@ -49,6 +58,16 @@ export default function Nav({
     fontSize: 17,
     fontWeight: 500,
     color: DRAWER_TEXT,
+    transition: THEME_TRANSITION,
+  };
+
+  const navLinkStyle = {
+    background: "none",
+    border: "none",
+    fontSize: 14,
+    letterSpacing: "0.03em",
+    color: navTextColor,
+    transition: THEME_TRANSITION,
   };
 
   return (
@@ -64,7 +83,7 @@ export default function Nav({
 borderBottom: scrolled || menuOpen || isProductPage ? `1px solid ${COLORS.border}` : "1px solid transparent",
           backdropFilter: "blur(18px)",
           WebkitBackdropFilter: "blur(18px)",
-          transition: "background 0.3s ease, border-color 0.3s ease",
+          transition: `background 0.4s ease, border-color 0.4s ease, ${THEME_TRANSITION}`,
         }}
       >
         <div style={{ maxWidth: 1240, margin: "0 auto" }} className="flex items-center justify-between px-4 sm:px-6 md:px-10">
@@ -79,9 +98,44 @@ borderBottom: scrolled || menuOpen || isProductPage ? `1px solid ${COLORS.border
               alignItems: "center",
               gap: 8,
               padding: "16px 0",
+              transition: THEME_TRANSITION,
             }}
           >
-            <JewelArt type="ring" style={{ width: 22, height: 22 }} />
+            {/* Crossfading logo: both images stacked, only opacity animates
+                so the swap is a fade instead of an instant pop. */}
+            <span style={{ position: "relative", width: 30, height: 22, display: "inline-block" }}>
+              <img
+                src={LOGO_LIGHT}
+                alt="Nyasa"
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  width: 30,
+                  height: 22,
+                  objectFit: "cover",
+                  transform: "scale(1.6)",
+                  objectPosition: "center",
+                  opacity: isDark ? 0 : 1,
+                  transition: "opacity 0.4s ease",
+                }}
+              />
+              <img
+                src={LOGO_DARK}
+                alt=""
+                aria-hidden="true"
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  width: 30,
+                  height: 22,
+                  objectFit: "cover",
+                  transform: "scale(1.6)",
+                  objectPosition: "center",
+                  opacity: isDark ? 1 : 0,
+                  transition: "opacity 0.4s ease",
+                }}
+              />
+            </span>
             Nyasa
           </a>
 
@@ -92,13 +146,7 @@ borderBottom: scrolled || menuOpen || isProductPage ? `1px solid ${COLORS.border
                   key={c}
                   onClick={() => scrollTo("shop")}
                   className="underline-grow"
-                  style={{
-                    background: "none",
-                    border: "none",
-                    fontSize: 14,
-                    letterSpacing: "0.03em",
-                    color: navTextColor,
-                  }}
+                  style={navLinkStyle}
                 >
                   {c}
                 </button>
@@ -106,21 +154,21 @@ borderBottom: scrolled || menuOpen || isProductPage ? `1px solid ${COLORS.border
               <button
                 onClick={() => scrollTo("craft")}
                 className="underline-grow"
-                style={{ background: "none", border: "none", fontSize: 14, letterSpacing: "0.03em", color: navTextColor }}
+                style={navLinkStyle}
               >
                 The Craft
               </button>
                <button
                 onClick={() => scrollTo("testimonials")}
                 className="underline-grow"
-                style={{ background: "none", border: "none", fontSize: 14, letterSpacing: "0.03em", color: navTextColor }}
+                style={navLinkStyle}
               >
                 Testimonials
               </button>
               <button
                 onClick={() => scrollTo("faq")}
                 className="underline-grow"
-                style={{ background: "none", border: "none", fontSize: 14, letterSpacing: "0.03em", color: navTextColor }}
+                style={navLinkStyle}
               >
                 FAQ
               </button>
@@ -143,10 +191,20 @@ borderBottom: scrolled || menuOpen || isProductPage ? `1px solid ${COLORS.border
                 alignItems: "center",
                 justifyContent: "center",
                 boxShadow: scrolled || menuOpen ? "none" : "0 8px 24px rgba(15, 23, 42, 0.12)",
-                transition: "background 0.3s ease, border-color 0.3s ease, color 0.3s ease",
+                transition: `background 0.4s ease, border-color 0.4s ease, color 0.4s ease, box-shadow 0.4s ease, transform 0.2s ease`,
               }}
             >
-              {themeMode === THEME_MODES.DARK ? <Sun size={18} strokeWidth={1.7} /> : <Moon size={18} strokeWidth={1.7} />}
+              {/* Icon swap gets its own quick fade so sun/moon don't just
+                  pop between states. */}
+              <span
+                key={themeMode}
+                style={{
+                  display: "inline-flex",
+                  animation: "theme-icon-fade 0.3s ease",
+                }}
+              >
+                {themeMode === THEME_MODES.DARK ? <Sun size={18} strokeWidth={1.7} /> : <Moon size={18} strokeWidth={1.7} />}
+              </span>
             </button>
             <button
               onClick={() => setCartOpen(true)}
@@ -157,6 +215,7 @@ borderBottom: scrolled || menuOpen || isProductPage ? `1px solid ${COLORS.border
                 position: "relative",
                 color: navTextColor,
                 padding: 8,
+                transition: THEME_TRANSITION,
               }}
             >
               <ShoppingBag size={20} strokeWidth={1.6} />
@@ -176,6 +235,7 @@ borderBottom: scrolled || menuOpen || isProductPage ? `1px solid ${COLORS.border
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
+                    transition: THEME_TRANSITION,
                   }}
                 >
                   {cartCount}
@@ -188,7 +248,7 @@ borderBottom: scrolled || menuOpen || isProductPage ? `1px solid ${COLORS.border
                 onClick={() => setMenuOpen((v) => !v)}
                 aria-label="Toggle menu"
                 aria-expanded={menuOpen}
-                style={{ background: "none", border: "none", color: navTextColor, padding: 8, minHeight: 44 }}
+                style={{ background: "none", border: "none", color: navTextColor, padding: 8, minHeight: 44, transition: THEME_TRANSITION }}
               >
                 {menuOpen ? <X size={22} strokeWidth={1.6} /> : <Menu size={22} strokeWidth={1.6} />}
               </button>
@@ -221,15 +281,15 @@ borderBottom: scrolled || menuOpen || isProductPage ? `1px solid ${COLORS.border
             pointerEvents: menuOpen ? "auto" : "none",
           }}
         >
-          <div className="flex items-center justify-between px-6" style={{ height: 64, borderBottom: `1px solid ${DRAWER_BORDER}` }}>
-            <span style={{ fontSize: 13, letterSpacing: "0.08em", color: DRAWER_MUTED, textTransform: "uppercase", fontWeight: 600 }}>
+          <div className="flex items-center justify-between px-6" style={{ height: 64, borderBottom: `1px solid ${DRAWER_BORDER}`, transition: THEME_TRANSITION }}>
+            <span style={{ fontSize: 13, letterSpacing: "0.08em", color: DRAWER_MUTED, textTransform: "uppercase", fontWeight: 600, transition: THEME_TRANSITION }}>
               Menu
             </span>
             <button
               onClick={() => setMenuOpen(false)}
               aria-label="Close menu"
               tabIndex={menuOpen ? 0 : -1}
-              style={{ background: "none", border: "none", color: DRAWER_TEXT, padding: 8 }}
+              style={{ background: "none", border: "none", color: DRAWER_TEXT, padding: 8, transition: THEME_TRANSITION }}
             >
               <X size={20} strokeWidth={1.8} />
             </button>
@@ -250,6 +310,13 @@ borderBottom: scrolled || menuOpen || isProductPage ? `1px solid ${COLORS.border
           </div>
         </nav>
       )}
+
+      <style>{`
+        @keyframes theme-icon-fade {
+          from { opacity: 0; transform: scale(0.6) rotate(-45deg); }
+          to { opacity: 1; transform: scale(1) rotate(0deg); }
+        }
+      `}</style>
     </>
   );
 }

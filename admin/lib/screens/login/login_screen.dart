@@ -65,31 +65,14 @@ class _LoginScreenState extends State<LoginScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Center(
-                      child: Container(
-                        width: 64,
-                        height: 64,
-                        decoration: BoxDecoration(
-                          color: AppColors.primary,
-                          borderRadius: BorderRadius.circular(18),
-                        ),
-                        child: const Icon(
-                          Icons.diamond_outlined,
-                          color: Colors.white,
-                          size: 30,
-                        ),
+                      child: Image.asset(
+                        'assests/nyasa.png',
+                        width: 200,
+                        height: 200,
                       ),
                     ),
                     const SizedBox(height: 24),
-                    const Center(
-                      child: Text(
-                        'NYASA',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.ink,
-                        ),
-                      ),
-                    ),
+
                     const SizedBox(height: 6),
                     const Center(
                       child: Text(
@@ -158,14 +141,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         return null;
                       },
                     ),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton(
-                        onPressed: () {},
-                        child: const Text('Forgot password?'),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
+
+                    const SizedBox(height: 30),
                     ElevatedButton(
                       onPressed: _loading ? null : _handleLogin,
                       child: _loading
